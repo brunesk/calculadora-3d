@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Custos Impressão 3D — Bruno Ferracini</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root{
+  --cyan:#22D3EE; --cyan-glow:rgba(34,211,238,.15);
+  --purple:#A855F7; --purple-glow:rgba(168,85,247,.15);
+  --green:#22C55E; --green-light:#4ADE80;
+  --red:#F43F5E; --amber:#F59E0B; --blue:#3B82F6;
+  --bg:#08080C; --bg2:#0F0F16; --card:#15151F; --card2:#1C1C28;
+  --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
+  --text:#F2F2F7; --text2:#9A9AAA; --text3:#5A5A6A;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+body{font-family:'Inter',-apple-system,sans-serif; background:var(--bg); color:var(--text);
+  min-height:100vh; padding:20px 14px 60px; -webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px; margin:0 auto;}
+
+/* HEADER */
+.header{position:relative; padding:30px 32px; border:1px solid var(--border2); border-radius:24px;
+  margin-bottom:22px; overflow:hidden;
+  background:linear-gradient(135deg,#0B1620 0%,#120B22 45%,#0A0A14 100%);}
+.header::before{content:''; position:absolute; top:-70px; left:-50px; width:300px; height:300px;
+  background:radial-gradient(circle,rgba(34,211,238,.22) 0%,transparent 70%); pointer-events:none;}
+.header::after{content:''; position:absolute; bottom:-90px; right:-40px; width:340px; height:340px;
+  background:radial-gradient(circle,rgba(168,85,247,.16) 0%,transparent 70%); pointer-events:none;}
+.header-in{position:relative; z-index:1;}
+.badge{display:inline-flex; align-items:center; gap:6px; background:var(--cyan-glow);
+  border:1px solid rgba(34,211,238,.3); color:var(--cyan); padding:5px 12px; border-radius:20px;
+  font-size:11px; font-weight:600; letter-spacing:.5px; margin-bottom:14px;}
+.header h1{font-size:clamp(21px,3vw,30px); font-weight:800; line-height:1.1; letter-spacing:-.5px;}
+.header p{color:var(--text2); font-size:14px; margin-top:8px; max-width:640px;}
+
+/* TABS */
+.tabs{display:flex; gap:8px; margin-bottom:22px; flex-wrap:wrap;}
+.tab{flex:1; min-width:150px; padding:14px 16px; background:var(--card); border:1px solid var(--border);
+  border-radius:14px; color:var(--text2); font-size:14px; font-weight:600; cursor:pointer;
+  transition:.18s; display:flex; align-items:center; justify-content:center; gap:8px;}
+.tab:hover{border-color:var(--border2); color:var(--text);}
+.tab.on{background:linear-gradient(135deg,var(--cyan),var(--purple)); color:#08080C; border-color:transparent;}
+
+.view{display:none;} .view.on{display:block;}
+
+/* CARDS / GRID */
+.card{background:var(--card); border:1px solid var(--border); border-radius:18px; padding:22px 22px; margin-bottom:18px;}
+.card h2{font-size:16px; font-weight:700; margin-bottom:4px; display:flex; align-items:center; gap:9px;}
+.card .sub{color:var(--text2); font-size:12.5px; margin-bottom:18px;}
+.ico{width:30px; height:30px; border-radius:9px; display:inline-flex; align-items:center; justify-content:center;
+  font-size:15px; background:var(--cyan-glow); border:1px solid rgba(34,211,238,.25);}
+.ico.p{background:var(--purple-glow); border-color:rgba(168,85,247,.25);}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;}
+.field label{display:block; font-size:12px; font-weight:600; color:var(--text2); margin-bottom:6px;}
+.field label .hint{color:var(--text3); font-weight:400;}
+.inbox{position:relative; display:flex; align-items:center;}
+.inbox .pre{position:absolute; left:12px; color:var(--text3); font-size:13px; font-weight:600; pointer-events:none;}
+.inbox .suf{position:absolute; right:12px; color:var(--text3); font-size:12px; pointer-events:none;}
+input[type=text],input[type=number]{width:100%; background:var(--bg2); border:1px solid var(--border);
+  border-radius:11px; padding:12px 13px; color:var(--text); font-size:14.5px; font-weight:600;
+  font-family:inherit; transition:.15s; outline:none;}
+.inbox.pad input{padding-left:32px;} .inbox.padr input{padding-right:44px;}
+input:focus{border-color:var(--cyan); box-shadow:0 0 0 3px var(--cyan-glow);}
+input::placeholder{color:var(--text3); font-weight:400;}
+
+.btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:13px 22px; border-radius:12px;
+  font-size:14px; font-weight:700; font-family:inherit; cursor:pointer; border:none; transition:.18s;}
+.btn-main{background:linear-gradient(135deg,var(--cyan),var(--purple)); color:#08080C; width:100%;}
+.btn-main:hover{filter:brightness(1.08); transform:translateY(-1px);}
+.btn-ghost{background:var(--card2); color:var(--text); border:1px solid var(--border2);}
+.btn-ghost:hover{border-color:var(--cyan); color:var(--cyan);}
+.btn-sm{padding:8px 14px; font-size:12.5px; border-radius:9px;}
+.btn-row{display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;}
+
+/* RESULT METRICS */
+.metrics{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;}
+.metric{background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:16px 16px; position:relative; overflow:hidden;}
+.metric .lbl{font-size:11.5px; color:var(--text2); font-weight:600; margin-bottom:7px; display:flex; align-items:center; gap:6px;}
+.metric .val{font-size:24px; font-weight:800; letter-spacing:-.5px; line-height:1;}
+.metric .note{font-size:11px; color:var(--text3); margin-top:6px;}
+.metric.hero{background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(34,211,238,.08)); border-color:rgba(34,197,94,.3);}
+.metric.hero .val{color:var(--green-light);}
+.metric.cost{border-color:rgba(244,63,94,.25);}
+.metric.cost .val{color:#FF7A8A;}
+.metric.big{grid-column:span 2;}
+@media(max-width:520px){.metric.big{grid-column:span 1;} .metric.hero .val,.metric.big .val{font-size:22px;}}
+
+/* COST BREAKDOWN */
+.break{margin-top:16px;}
+.break-row{display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--border);}
+.break-row:last-child{border-bottom:none;}
+.break-row .k{font-size:13.5px; color:var(--text2); display:flex; align-items:center; gap:9px;}
+.break-row .dot{width:9px; height:9px; border-radius:3px;}
+.break-row .v{font-size:14px; font-weight:700;}
+.break-row.total{border-top:2px solid var(--border2); margin-top:4px; padding-top:14px;}
+.break-row.total .k{color:var(--text); font-weight:700; font-size:14.5px;}
+.break-row.total .v{font-size:17px; color:#FF7A8A;}
+
+.bar{height:10px; border-radius:6px; overflow:hidden; display:flex; margin:14px 0 18px; background:var(--bg2);}
+.bar span{height:100%;}
+
+/* MARGIN SLIDER */
+.margin-box{background:var(--bg2); border:1px solid var(--border); border-radius:14px; padding:18px; margin-top:6px;}
+.margin-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+.margin-top .mv{font-size:26px; font-weight:800; color:var(--cyan);}
+input[type=range]{-webkit-appearance:none; width:100%; height:8px; border-radius:6px;
+  background:linear-gradient(90deg,var(--cyan),var(--purple)); outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:24px; height:24px; border-radius:50%;
+  background:#fff; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.4); border:3px solid var(--cyan);}
+
+/* PRODUCTS TABLE */
+.tools{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:14px;}
+.tools .search{flex:1; min-width:180px;}
+.tools select{background:var(--bg2); border:1px solid var(--border); border-radius:11px; padding:11px 13px;
+  color:var(--text); font-size:13.5px; font-weight:600; font-family:inherit; outline:none; cursor:pointer;}
+.prod{background:var(--card2); border:1px solid var(--border); border-radius:14px; padding:16px 18px; margin-bottom:12px; transition:.15s;}
+.prod:hover{border-color:var(--border2);}
+.prod-head{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px;}
+.prod-name{font-size:16px; font-weight:700;}
+.prod-tags{display:flex; gap:7px; flex-wrap:wrap; margin-top:5px;}
+.pill{font-size:11px; font-weight:600; padding:3px 9px; border-radius:20px; background:var(--bg2); color:var(--text2); border:1px solid var(--border);}
+.pill.g{background:rgba(34,197,94,.12); color:var(--green-light); border-color:rgba(34,197,94,.25);}
+.pill.r{background:rgba(244,63,94,.12); color:#FF7A8A; border-color:rgba(244,63,94,.25);}
+.pill.c{background:var(--cyan-glow); color:var(--cyan); border-color:rgba(34,211,238,.25);}
+.prod-stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:10px;}
+.pstat{background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:10px 11px;}
+.pstat .l{font-size:10.5px; color:var(--text3); font-weight:600; margin-bottom:4px;}
+.pstat .n{font-size:15px; font-weight:800;}
+.prod-actions{display:flex; gap:8px;}
+.iconbtn{width:34px; height:34px; border-radius:9px; border:1px solid var(--border2); background:var(--bg2);
+  color:var(--text2); cursor:pointer; font-size:15px; display:inline-flex; align-items:center; justify-content:center; transition:.15s;}
+.iconbtn:hover{color:var(--text); border-color:var(--cyan);}
+.iconbtn.del:hover{color:var(--red); border-color:var(--red);}
+
+.empty{text-align:center; padding:44px 20px; color:var(--text3);}
+.empty .em{font-size:40px; margin-bottom:12px;}
+
+.callout{background:var(--bg2); border:1px solid var(--border); border-left:3px solid var(--cyan); border-radius:10px;
+  padding:12px 15px; font-size:12.5px; color:var(--text2); line-height:1.55; margin-top:14px;}
+.callout b{color:var(--text);}
+.savebar{position:sticky; bottom:14px; z-index:5; margin-top:4px;}
+
+.foot{text-align:center; color:var(--text3); font-size:12px; margin-top:26px;}
+.acc-toggle{cursor:pointer; user-select:none;}
+.acc-toggle .chev{transition:.2s; color:var(--text3);}
+.card.collapsed .acc-body{display:none;}
+.card.collapsed .acc-toggle .chev{transform:rotate(-90deg);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="header">
+    <div class="header-in">
+      <span class="badge">🖨️ IMPRESSÃO 3D · GESTÃO DE CUSTOS</span>
+      <h1>Calculadora de Custos & Viabilidade 3D</h1>
+      <p>Descubra o custo real de cada peça, o preço ideal de venda, e quanto dá pra lucrar rodando a impressora 24h por dia. Tudo salvo automaticamente no seu navegador.</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="tab('calc')">🧮 Calculadora</button>
+    <button class="tab" onclick="tab('prod')">📦 Meus Produtos <span id="prodCount" style="opacity:.7"></span></button>
+    <button class="tab" onclick="tab('cfg')">⚙️ Máquina</button>
+  </div>
+
+  <!-- ===================== CALCULADORA ===================== -->
+  <div id="calc" class="view on">
+
+    <div class="card">
+      <h2><span class="ico">✏️</span> Dados do produto</h2>
+      <p class="sub">Preencha e o resultado aparece na hora embaixo.</p>
+      <div class="grid">
+        <div class="field">
+          <label>Nome do produto</label>
+          <div class="inbox"><input type="text" id="pName" placeholder="Ex: Vaso geométrico M"></div>
+        </div>
+        <div class="field">
+          <label>Filamento usado <span class="hint">(gramas)</span></label>
+          <div class="inbox padr"><input type="number" id="pGram" placeholder="0" oninput="calc()"><span class="suf">g</span></div>
+        </div>
+        <div class="field">
+          <label>Preço do filamento <span class="hint">(por kg)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pFilKg" placeholder="120" oninput="calc()"></div>
+        </div>
+        <div class="field">
+          <label>Tempo de impressão <span class="hint">(horas)</span></label>
+          <div class="inbox padr"><input type="number" id="pTime" placeholder="0" step="0.1" oninput="calc()"><span class="suf">h</span></div>
+        </div>
+        <div class="field">
+          <label>Seu trabalho manual <span class="hint">(min: preparo + acabamento)</span></label>
+          <div class="inbox padr"><input type="number" id="pLabor" placeholder="0" oninput="calc()"><span class="suf">min</span></div>
+        </div>
+        <div class="field">
+          <label>Materiais extras <span class="hint">(ímã, tinta, parafuso…)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pExtra" placeholder="0" oninput="calc()"></div>
+        </div>
+        <div class="field">
+          <label>Embalagem <span class="hint">(por unidade)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pPack" placeholder="0" oninput="calc()"></div>
+        </div>
+        <div class="field">
+          <label>Peças por impressão <span class="hint">(quantas saem de uma vez)</span></label>
+          <div class="inbox"><input type="number" id="pQty" placeholder="1" value="1" oninput="calc()"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="ico p">💰</span> Preço de venda & margem</h2>
+      <p class="sub">Ajuste a margem de lucro que você quer. O preço sugerido já desconta a taxa do marketplace.</p>
+      <div class="margin-box">
+        <div class="margin-top">
+          <div>
+            <div style="font-size:12px;color:var(--text2);font-weight:600">Margem de lucro desejada</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:3px">sobre o custo total</div>
+          </div>
+          <div class="mv"><span id="marginVal">60</span>%</div>
+        </div>
+        <input type="range" id="pMargin" min="0" max="300" value="60" oninput="calc()">
+      </div>
+      <div class="grid" style="margin-top:16px">
+        <div class="field">
+          <label>Ou defina um preço de venda fixo <span class="hint">(opcional)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pPrice" placeholder="deixe vazio p/ usar a margem" oninput="calc(true)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="ico">📊</span> Resultado</h2>
+      <p class="sub">Custo real da peça, preço ideal e lucro.</p>
+
+      <div class="metrics">
+        <div class="metric cost">
+          <div class="lbl">🧾 Custo total por peça</div>
+          <div class="val" id="rCost">R$ 0,00</div>
+          <div class="note" id="rCostNote">por unidade</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">🏷️ Preço de venda sugerido</div>
+          <div class="val" id="rPrice" style="color:var(--cyan)">R$ 0,00</div>
+          <div class="note" id="rPriceNote">com a margem escolhida</div>
+        </div>
+        <div class="metric hero">
+          <div class="lbl">✅ Lucro líquido por peça</div>
+          <div class="val" id="rProfit">R$ 0,00</div>
+          <div class="note" id="rMarginReal">margem real 0%</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">⏱️ Lucro por hora de impressão</div>
+          <div class="val" id="rPerHour" style="color:var(--amber)">R$ 0,00</div>
+          <div class="note">quanto maior, melhor o produto</div>
+        </div>
+      </div>
+
+      <div class="break">
+        <div class="break-row"><span class="k"><span class="dot" style="background:var(--cyan)"></span>Filamento</span><span class="v" id="bFil">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:var(--amber)"></span>Energia elétrica</span><span class="v" id="bEne">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:var(--purple)"></span>Depreciação da máquina</span><span class="v" id="bDep">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:#EC4899"></span>Manutenção</span><span class="v" id="bMan">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:var(--blue)"></span>Sua mão de obra</span><span class="v" id="bLab">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:#14B8A6"></span>Materiais extras + embalagem</span><span class="v" id="bExt">R$ 0,00</span></div>
+        <div class="break-row"><span class="k"><span class="dot" style="background:var(--red)"></span>Reserva p/ falhas de impressão</span><span class="v" id="bFail">R$ 0,00</span></div>
+        <div class="break-row total"><span class="k">Custo total por peça</span><span class="v" id="bTotal">R$ 0,00</span></div>
+      </div>
+    </div>
+
+    <!-- MAXIMO DE LUCRO -->
+    <div class="card">
+      <h2><span class="ico p">🚀</span> Produção máxima (impressora 24h/dia · 30 dias)</h2>
+      <p class="sub">Se você deixar a impressora imprimindo <b>sem parar</b> o mês inteiro só com este produto, este é o teto teórico.</p>
+      <div class="metrics">
+        <div class="metric">
+          <div class="lbl">📦 Peças por mês</div>
+          <div class="val" id="mUnits" style="color:var(--cyan)">0</div>
+          <div class="note" id="mUnitsNote">em 720 horas de impressão</div>
+        </div>
+        <div class="metric">
+          <div class="lbl">💵 Faturamento máximo</div>
+          <div class="val" id="mRevenue">R$ 0</div>
+          <div class="note">vendendo tudo</div>
+        </div>
+        <div class="metric hero big">
+          <div class="lbl">🏆 Lucro líquido máximo no mês</div>
+          <div class="val" id="mProfit">R$ 0</div>
+          <div class="note" id="mProfitNote">teto rodando 24/7</div>
+        </div>
+      </div>
+      <div class="callout" id="mWarn">💡 Este é o <b>máximo teórico</b>: assume a impressora 100% do tempo ligada e todas as peças vendidas. Na prática, considere falhas, tempo de troca de bobina e vendas reais. Use o número de <b>lucro por hora de impressão</b> para comparar qual produto vale mais a pena.</div>
+    </div>
+
+    <div class="savebar">
+      <button class="btn btn-main" onclick="saveProduct()">💾 Salvar produto na minha lista</button>
+      <div class="btn-row" style="justify-content:center;margin-top:10px">
+        <button class="btn btn-ghost btn-sm" onclick="clearForm()">🧹 Limpar campos</button>
+        <span id="editHint" style="display:none;align-self:center;font-size:12px;color:var(--amber)">✏️ editando um produto salvo</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== PRODUTOS ===================== -->
+  <div id="prod" class="view">
+    <div class="card">
+      <h2><span class="ico">📦</span> Meus produtos cadastrados</h2>
+      <p class="sub">Tudo salvo no navegador. Ordene por lucro pra ver o que rende mais.</p>
+      <div class="tools">
+        <div class="search inbox pad"><span class="pre">🔎</span><input type="text" id="searchProd" placeholder="Buscar produto…" oninput="renderProducts()"></div>
+        <select id="sortProd" onchange="renderProducts()">
+          <option value="perHour">Ordenar: Lucro por hora ⭐</option>
+          <option value="profit">Lucro por peça</option>
+          <option value="monthly">Lucro máximo no mês</option>
+          <option value="margin">Margem %</option>
+          <option value="name">Nome (A-Z)</option>
+        </select>
+      </div>
+      <div id="prodList"></div>
+    </div>
+    <div class="card" id="summaryCard" style="display:none">
+      <h2><span class="ico p">📈</span> Resumo do catálogo</h2>
+      <div class="metrics" style="margin-top:8px">
+        <div class="metric"><div class="lbl">Produtos</div><div class="val" id="sCount">0</div></div>
+        <div class="metric"><div class="lbl">🏆 Melhor lucro/hora</div><div class="val" id="sBest" style="color:var(--amber);font-size:18px">—</div><div class="note" id="sBestVal"></div></div>
+        <div class="metric"><div class="lbl">Lucro médio por peça</div><div class="val" id="sAvg" style="color:var(--green-light)">R$ 0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== MAQUINA / CONFIG ===================== -->
+  <div id="cfg" class="view">
+    <div class="card">
+      <h2><span class="ico">⚙️</span> Configuração da máquina & negócio</h2>
+      <p class="sub">Preencha uma vez. Esses valores entram no cálculo de todos os produtos. (Já vem com valores médios — ajuste pros seus.)</p>
+      <div class="grid">
+        <div class="field">
+          <label>Preço da impressora <span class="hint">(quanto pagou)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="cPrinter" placeholder="1500" oninput="saveCfg();calc()"></div>
+        </div>
+        <div class="field">
+          <label>Vida útil estimada <span class="hint">(horas até trocar)</span></label>
+          <div class="inbox padr"><input type="number" id="cLife" placeholder="4000" oninput="saveCfg();calc()"><span class="suf">h</span></div>
+        </div>
+        <div class="field">
+          <label>Manutenção na vida útil <span class="hint">(bicos, correias, peças)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="cMaint" placeholder="400" oninput="saveCfg();calc()"></div>
+        </div>
+        <div class="field">
+          <label>Potência da impressora <span class="hint">(consumo médio)</span></label>
+          <div class="inbox padr"><input type="number" id="cWatt" placeholder="150" oninput="saveCfg();calc()"><span class="suf">W</span></div>
+        </div>
+        <div class="field">
+          <label>Preço da energia <span class="hint">(veja na sua conta de luz)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="cKwh" placeholder="0.90" step="0.01" oninput="saveCfg();calc()"></div>
+        </div>
+        <div class="field">
+          <label>Valor da sua hora <span class="hint">(quanto vale seu tempo)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="cHour" placeholder="25" oninput="saveCfg();calc()"></div>
+        </div>
+        <div class="field">
+          <label>Taxa de falha <span class="hint">(% de impressões que dão errado)</span></label>
+          <div class="inbox padr"><input type="number" id="cFail" placeholder="8" oninput="saveCfg();calc()"><span class="suf">%</span></div>
+        </div>
+        <div class="field">
+          <label>Taxa do marketplace <span class="hint">(Shopee/ML + imposto)</span></label>
+          <div class="inbox padr"><input type="number" id="cFee" placeholder="20" oninput="saveCfg();calc()"><span class="suf">%</span></div>
+        </div>
+      </div>
+      <div class="callout">
+        <b>Como cada campo entra no custo:</b><br>
+        • <b>Depreciação</b> = (preço da impressora ÷ vida útil) × horas da peça — cada hora "gasta" um pouco da máquina.<br>
+        • <b>Manutenção</b> = (custo de manutenção ÷ vida útil) × horas da peça.<br>
+        • <b>Energia</b> = potência × horas × preço do kWh.<br>
+        • <b>Taxa de falha</b> adiciona uma reserva no custo pra cobrir impressões perdidas.<br>
+        • <b>Taxa do marketplace</b> é descontada do preço de venda pra achar o lucro líquido real.
+      </div>
+      <div class="btn-row" style="margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="resetCfg()">↺ Voltar aos valores médios</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Feito para Bruno Ferracini · dados salvos só no seu navegador (localStorage) · nada vai pra internet</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const BRL=n=>'R$ '+(isFinite(n)?n:0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const BRL0=n=>'R$ '+Math.round(isFinite(n)?n:0).toLocaleString('pt-BR');
+const num=id=>{const v=parseFloat($(id).value.replace(',','.'));return isFinite(v)?v:0;};
+
+/* ---------- CONFIG ---------- */
+const CFG_DEFAULT={cPrinter:1500,cLife:4000,cMaint:400,cWatt:150,cKwh:0.90,cHour:25,cFail:8,cFee:20};
+const CFG_KEYS=Object.keys(CFG_DEFAULT);
+function loadCfg(){
+  let c={}; try{c=JSON.parse(localStorage.getItem('cfg3d'))||{};}catch(e){}
+  CFG_KEYS.forEach(k=>{ $(k).value = (c[k]!==undefined? c[k] : CFG_DEFAULT[k]); });
+}
+function saveCfg(){
+  const c={}; CFG_KEYS.forEach(k=>c[k]=num(k));
+  localStorage.setItem('cfg3d',JSON.stringify(c));
+}
+function resetCfg(){
+  CFG_KEYS.forEach(k=>$(k).value=CFG_DEFAULT[k]); saveCfg(); calc();
+}
+
+/* ---------- CALC ---------- */
+let last={};
+function calc(fromPrice){
+  $('marginVal').textContent=num('pMargin');
+
+  const gram=num('pGram'), filKg=num('pFilKg'), time=num('pTime'),
+        labor=num('pLabor'), extra=num('pExtra'), pack=num('pPack'),
+        qty=Math.max(1,num('pQty'));
+  const printer=num('cPrinter'), life=num('cLife')||1, maint=num('cMaint'),
+        watt=num('cWatt'), kwh=num('cKwh'), hour=num('cHour'),
+        failPct=num('cFail'), feePct=num('cFee');
+
+  // custos por IMPRESSÃO (uma leva) — depois dividimos por qty
+  const cFil=(gram/1000)*filKg;
+  const cEne=(watt/1000)*time*kwh;
+  const cDep=(printer/life)*time;
+  const cMan=(maint/life)*time;
+  const cLab=(labor/60)*hour;
+  const cExt=extra+pack; // por peça já
+  // por peça:
+  const filU=cFil/qty, eneU=cEne/qty, depU=cDep/qty, manU=cMan/qty, labU=cLab/qty, extU=cExt;
+  const baseU=filU+eneU+depU+manU+labU+extU;
+  const failU=baseU*(failPct/100);
+  const costU=baseU+failU;
+
+  // preço
+  const margin=num('pMargin');
+  const feeR=feePct/100;
+  let priceU, usedFixed=false;
+  const fixed=$('pPrice').value.trim();
+  if(fixed!==''){ priceU=num('pPrice'); usedFixed=true; }
+  else {
+    // preço tal que, após taxa marketplace, sobre custo*(1+margem)
+    const target=costU*(1+margin/100);
+    priceU= feeR<1 ? target/(1-feeR) : target;
+  }
+  const feeVal=priceU*feeR;
+  const profitU=priceU-costU-feeVal;
+  const marginReal= costU>0 ? (profitU/costU*100) : 0;
+  const perHour= time>0 ? profitU*qty/time : 0;
+
+  // producao maxima 720h/mes
+  const unitsMonth= time>0 ? Math.floor(720/time)*qty : 0;
+  const revMonth=unitsMonth*priceU;
+  const profitMonth=unitsMonth*profitU;
+
+  // render breakdown
+  $('bFil').textContent=BRL(filU); $('bEne').textContent=BRL(eneU);
+  $('bDep').textContent=BRL(depU); $('bMan').textContent=BRL(manU);
+  $('bLab').textContent=BRL(labU); $('bExt').textContent=BRL(extU);
+  $('bFail').textContent=BRL(failU); $('bTotal').textContent=BRL(costU);
+
+  $('rCost').textContent=BRL(costU);
+  $('rCostNote').textContent= qty>1? qty+' peças por impressão' : 'por unidade';
+  $('rPrice').textContent=BRL(priceU);
+  $('rPriceNote').textContent= usedFixed? 'preço fixo definido por você' : 'com margem de '+margin+'% (já desconta '+feePct+'% de taxa)';
+  $('rProfit').textContent=BRL(profitU);
+  $('rMarginReal').textContent='margem real '+marginReal.toFixed(0)+'% · taxa: '+BRL(feeVal);
+  $('rProfit').style.color = profitU>=0? 'var(--green-light)':'#FF7A8A';
+  $('rPerHour').textContent=BRL(perHour);
+
+  $('mUnits').textContent=unitsMonth.toLocaleString('pt-BR');
+  $('mUnitsNote').textContent= time>0? 'cada leva leva '+time+'h' : 'informe o tempo de impressão';
+  $('mRevenue').textContent=BRL0(revMonth);
+  $('mProfit').textContent=BRL0(profitMonth);
+  $('mProfit').style.color = profitMonth>=0? 'var(--green-light)':'#FF7A8A';
+
+  last={name:$('pName').value.trim(),gram,filKg,time,labor,extra,pack,qty,margin,
+        fixedPrice:usedFixed?priceU:null,costU,priceU,profitU,marginReal,perHour,unitsMonth,profitMonth};
+}
+
+/* ---------- PRODUCTS ---------- */
+function getProducts(){ try{return JSON.parse(localStorage.getItem('produtos3d'))||[];}catch(e){return[];} }
+function setProducts(a){ localStorage.setItem('produtos3d',JSON.stringify(a)); updateCount(); }
+let editId=null;
+
+function saveProduct(){
+  calc();
+  if(!last.name){ alert('Dê um nome ao produto antes de salvar.'); $('pName').focus(); return; }
+  if(last.time<=0 || last.gram<=0){ if(!confirm('Filamento ou tempo estão zerados. Salvar mesmo assim?')) return; }
+  const arr=getProducts();
+  const rec={
+    id: editId||('p'+Date.now()),
+    name:last.name, gram:last.gram, filKg:last.filKg, time:last.time, labor:last.labor,
+    extra:last.extra, pack:last.pack, qty:last.qty, margin:last.margin, fixedPrice:last.fixedPrice,
+    costU:last.costU, priceU:last.priceU, profitU:last.profitU, marginReal:last.marginReal,
+    perHour:last.perHour, unitsMonth:last.unitsMonth, profitMonth:last.profitMonth,
+    updated:Date.now()
+  };
+  if(editId){ const i=arr.findIndex(p=>p.id===editId); if(i>=0)arr[i]=rec; }
+  else arr.unshift(rec);
+  setProducts(arr);
+  editId=null; $('editHint').style.display='none';
+  renderProducts();
+  tab('prod');
+  const b=document.querySelector('.btn-main'); const t=b.textContent; b.textContent='✅ Salvo!'; setTimeout(()=>b.textContent=t,1400);
+}
+
+function editProduct(id){
+  const p=getProducts().find(x=>x.id===id); if(!p)return;
+  $('pName').value=p.name; $('pGram').value=p.gram; $('pFilKg').value=p.filKg;
+  $('pTime').value=p.time; $('pLabor').value=p.labor; $('pExtra').value=p.extra;
+  $('pPack').value=p.pack; $('pQty').value=p.qty; $('pMargin').value=p.margin;
+  $('pPrice').value= p.fixedPrice!=null? p.fixedPrice : '';
+  editId=id; $('editHint').style.display='inline';
+  tab('calc'); calc(); window.scrollTo({top:0,behavior:'smooth'});
+}
+function delProduct(id){
+  if(!confirm('Apagar este produto?'))return;
+  setProducts(getProducts().filter(p=>p.id!==id)); renderProducts();
+}
+function dupProduct(id){
+  const p=getProducts().find(x=>x.id===id); if(!p)return;
+  const c={...p,id:'p'+Date.now(),name:p.name+' (cópia)',updated:Date.now()};
+  const arr=getProducts(); arr.unshift(c); setProducts(arr); renderProducts();
+}
+
+function renderProducts(){
+  let arr=getProducts();
+  const q=($('searchProd').value||'').toLowerCase();
+  if(q) arr=arr.filter(p=>p.name.toLowerCase().includes(q));
+  const sort=$('sortProd').value;
+  const cmp={perHour:(a,b)=>b.perHour-a.perHour, profit:(a,b)=>b.profitU-a.profitU,
+    monthly:(a,b)=>b.profitMonth-a.profitMonth, margin:(a,b)=>b.marginReal-a.marginReal,
+    name:(a,b)=>a.name.localeCompare(b.name)};
+  arr.sort(cmp[sort]);
+
+  const list=$('prodList');
+  if(arr.length===0){
+    list.innerHTML='<div class="empty"><div class="em">📦</div><div style="font-size:15px;color:var(--text2);font-weight:600">Nenhum produto ainda</div><div style="margin-top:6px">Use a aba <b>Calculadora</b> e clique em “Salvar produto”.</div></div>';
+    $('summaryCard').style.display='none'; return;
+  }
+  const best= [...arr].sort((a,b)=>b.perHour-a.perHour)[0];
+  list.innerHTML=arr.map(p=>{
+    const isBest=p.id===best.id;
+    return `<div class="prod">
+      <div class="prod-head">
+        <div>
+          <div class="prod-name">${esc(p.name)} ${isBest?'<span class="pill c">🏆 mais rende/hora</span>':''}</div>
+          <div class="prod-tags">
+            <span class="pill">${p.gram}g · ${p.time}h${p.qty>1?' · '+p.qty+'un/leva':''}</span>
+            <span class="pill ${p.marginReal>=40?'g':'r'}">margem ${p.marginReal.toFixed(0)}%</span>
+          </div>
+        </div>
+        <div class="prod-actions">
+          <button class="iconbtn" title="Editar" onclick="editProduct('${p.id}')">✏️</button>
+          <button class="iconbtn" title="Duplicar" onclick="dupProduct('${p.id}')">⧉</button>
+          <button class="iconbtn del" title="Apagar" onclick="delProduct('${p.id}')">🗑️</button>
+        </div>
+      </div>
+      <div class="prod-stats">
+        <div class="pstat"><div class="l">Custo/peça</div><div class="n" style="color:#FF7A8A">${BRL(p.costU)}</div></div>
+        <div class="pstat"><div class="l">Preço venda</div><div class="n" style="color:var(--cyan)">${BRL(p.priceU)}</div></div>
+        <div class="pstat"><div class="l">Lucro/peça</div><div class="n" style="color:var(--green-light)">${BRL(p.profitU)}</div></div>
+        <div class="pstat"><div class="l">Lucro/hora</div><div class="n" style="color:var(--amber)">${BRL(p.perHour)}</div></div>
+        <div class="pstat"><div class="l">Lucro máx/mês</div><div class="n" style="color:var(--green-light)">${BRL0(p.profitMonth)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('summaryCard').style.display='block';
+  $('sCount').textContent=arr.length;
+  $('sBest').textContent=best.name;
+  $('sBestVal').textContent=BRL(best.perHour)+'/h';
+  const avg=arr.reduce((s,p)=>s+p.profitU,0)/arr.length;
+  $('sAvg').textContent=BRL(avg);
+}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function updateCount(){ const n=getProducts().length; $('prodCount').textContent=n?'('+n+')':''; }
+
+function clearForm(){
+  ['pName','pGram','pFilKg','pTime','pLabor','pExtra','pPack','pPrice'].forEach(id=>$(id).value='');
+  $('pQty').value=1; $('pMargin').value=60; editId=null; $('editHint').style.display='none'; calc();
+}
+
+/* ---------- TABS ---------- */
+function tab(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  $(name).classList.add('on');
+  const idx={calc:0,prod:1,cfg:2}[name];
+  document.querySelectorAll('.tab')[idx].classList.add('on');
+  if(name==='prod')renderProducts();
+}
+
+/* ---------- INIT ---------- */
+loadCfg(); updateCount(); calc();
+</script>
+</body>
+</html>
