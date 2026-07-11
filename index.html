@@ -225,6 +225,14 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:24px; hei
       </div>
       <div class="grid" style="margin-top:16px">
         <div class="field">
+          <label>Taxa do marketplace <span class="hint">(Shopee/ML + imposto)</span></label>
+          <div class="inbox padr"><input type="number" id="pMktFee" placeholder="20" value="20" oninput="calc()"><span class="suf">%</span></div>
+        </div>
+        <div class="field">
+          <label>Taxa fixa por venda <span class="hint">(R$ fixo por pedido/item)</span></label>
+          <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pFixed" placeholder="0" oninput="calc()"></div>
+        </div>
+        <div class="field">
           <label>Ou defina um preço de venda fixo <span class="hint">(opcional)</span></label>
           <div class="inbox pad"><span class="pre">R$</span><input type="number" id="pPrice" placeholder="deixe vazio p/ usar a margem" oninput="calc(true)"></div>
         </div>
@@ -364,10 +372,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:24px; hei
           <label>Taxa de falha <span class="hint">(% de impressões que dão errado)</span></label>
           <div class="inbox padr"><input type="number" id="cFail" placeholder="8" oninput="saveCfg();calc()"><span class="suf">%</span></div>
         </div>
-        <div class="field">
-          <label>Taxa do marketplace <span class="hint">(Shopee/ML + imposto)</span></label>
-          <div class="inbox padr"><input type="number" id="cFee" placeholder="20" oninput="saveCfg();calc()"><span class="suf">%</span></div>
-        </div>
       </div>
       <div class="callout">
         <b>Como cada campo entra no custo:</b><br>
@@ -375,7 +379,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:24px; hei
         • <b>Manutenção</b> = (custo de manutenção ÷ vida útil) × horas da peça.<br>
         • <b>Energia</b> = potência × horas × preço do kWh.<br>
         • <b>Taxa de falha</b> adiciona uma reserva no custo pra cobrir impressões perdidas.<br>
-        • <b>Taxa do marketplace</b> é descontada do preço de venda pra achar o lucro líquido real.
+        • As <b>taxas de venda</b> (marketplace % e taxa fixa) ficam na aba Calculadora, porque mudam de produto pra produto.
       </div>
       <div class="btn-row" style="margin-top:16px">
         <button class="btn btn-ghost btn-sm" onclick="resetCfg()">↺ Voltar aos valores médios</button>
@@ -393,7 +397,7 @@ const BRL0=n=>'R$ '+Math.round(isFinite(n)?n:0).toLocaleString('pt-BR');
 const num=id=>{const v=parseFloat($(id).value.replace(',','.'));return isFinite(v)?v:0;};
 
 /* ---------- CONFIG ---------- */
-const CFG_DEFAULT={cPrinter:1500,cLife:4000,cMaint:400,cWatt:150,cKwh:0.90,cHour:25,cFail:8,cFee:20};
+const CFG_DEFAULT={cPrinter:1500,cLife:4000,cMaint:400,cWatt:150,cKwh:0.90,cHour:25,cFail:8};
 const CFG_KEYS=Object.keys(CFG_DEFAULT);
 function loadCfg(){
   let c={}; try{c=JSON.parse(localStorage.getItem('cfg3d'))||{};}catch(e){}
@@ -416,8 +420,8 @@ function calc(fromPrice){
         labor=num('pLabor'), extra=num('pExtra'), pack=num('pPack'),
         qty=Math.max(1,num('pQty'));
   const printer=num('cPrinter'), life=num('cLife')||1, maint=num('cMaint'),
-        watt=num('cWatt'), kwh=num('cKwh'), hour=num('cHour'),
-        failPct=num('cFail'), feePct=num('cFee');
+        watt=num('cWatt'), kwh=num('cKwh'), hour=num('cHour'), failPct=num('cFail');
+  const feePct=num('pMktFee'), fixedFee=num('pFixed');
 
   // custos por IMPRESSÃO (uma leva) — depois dividimos por qty
   const cFil=(gram/1000)*filKg;
@@ -439,12 +443,13 @@ function calc(fromPrice){
   const fixed=$('pPrice').value.trim();
   if(fixed!==''){ priceU=num('pPrice'); usedFixed=true; }
   else {
-    // preço tal que, após taxa marketplace, sobre custo*(1+margem)
-    const target=costU*(1+margin/100);
+    // preço tal que, após taxas de venda (% + fixa), sobre custo*(1+margem)
+    const target=costU*(1+margin/100)+fixedFee;
     priceU= feeR<1 ? target/(1-feeR) : target;
   }
   const feeVal=priceU*feeR;
-  const profitU=priceU-costU-feeVal;
+  const sellCost=feeVal+fixedFee;      // taxas de venda: % marketplace + taxa fixa
+  const profitU=priceU-costU-sellCost;
   const marginReal= costU>0 ? (profitU/costU*100) : 0;
   const perHour= time>0 ? profitU*qty/time : 0;
 
@@ -462,9 +467,9 @@ function calc(fromPrice){
   $('rCost').textContent=BRL(costU);
   $('rCostNote').textContent= qty>1? qty+' peças por impressão' : 'por unidade';
   $('rPrice').textContent=BRL(priceU);
-  $('rPriceNote').textContent= usedFixed? 'preço fixo definido por você' : 'com margem de '+margin+'% (já desconta '+feePct+'% de taxa)';
+  $('rPriceNote').textContent= usedFixed? 'preço fixo definido por você' : 'com margem de '+margin+'% (já desconta as taxas de venda)';
   $('rProfit').textContent=BRL(profitU);
-  $('rMarginReal').textContent='margem real '+marginReal.toFixed(0)+'% · taxa: '+BRL(feeVal);
+  $('rMarginReal').textContent='margem real '+marginReal.toFixed(0)+'% · taxas venda: '+BRL(sellCost);
   $('rProfit').style.color = profitU>=0? 'var(--green-light)':'#FF7A8A';
   $('rPerHour').textContent=BRL(perHour);
 
@@ -475,6 +480,7 @@ function calc(fromPrice){
   $('mProfit').style.color = profitMonth>=0? 'var(--green-light)':'#FF7A8A';
 
   last={name:$('pName').value.trim(),gram,filKg,time,labor,extra,pack,qty,margin,
+        mktFee:feePct,fixed:fixedFee,
         fixedPrice:usedFixed?priceU:null,costU,priceU,profitU,marginReal,perHour,unitsMonth,profitMonth};
 }
 
@@ -491,7 +497,8 @@ function saveProduct(){
   const rec={
     id: editId||('p'+Date.now()),
     name:last.name, gram:last.gram, filKg:last.filKg, time:last.time, labor:last.labor,
-    extra:last.extra, pack:last.pack, qty:last.qty, margin:last.margin, fixedPrice:last.fixedPrice,
+    extra:last.extra, pack:last.pack, qty:last.qty, margin:last.margin,
+    mktFee:last.mktFee, fixed:last.fixed, fixedPrice:last.fixedPrice,
     costU:last.costU, priceU:last.priceU, profitU:last.profitU, marginReal:last.marginReal,
     perHour:last.perHour, unitsMonth:last.unitsMonth, profitMonth:last.profitMonth,
     updated:Date.now()
@@ -510,6 +517,7 @@ function editProduct(id){
   $('pName').value=p.name; $('pGram').value=p.gram; $('pFilKg').value=p.filKg;
   $('pTime').value=p.time; $('pLabor').value=p.labor; $('pExtra').value=p.extra;
   $('pPack').value=p.pack; $('pQty').value=p.qty; $('pMargin').value=p.margin;
+  $('pMktFee').value= p.mktFee!=null? p.mktFee : 20; $('pFixed').value= p.fixed||'';
   $('pPrice').value= p.fixedPrice!=null? p.fixedPrice : '';
   editId=id; $('editHint').style.display='inline';
   tab('calc'); calc(); window.scrollTo({top:0,behavior:'smooth'});
@@ -578,8 +586,8 @@ function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>'
 function updateCount(){ const n=getProducts().length; $('prodCount').textContent=n?'('+n+')':''; }
 
 function clearForm(){
-  ['pName','pGram','pFilKg','pTime','pLabor','pExtra','pPack','pPrice'].forEach(id=>$(id).value='');
-  $('pQty').value=1; $('pMargin').value=60; editId=null; $('editHint').style.display='none'; calc();
+  ['pName','pGram','pFilKg','pTime','pLabor','pExtra','pPack','pPrice','pFixed'].forEach(id=>$(id).value='');
+  $('pQty').value=1; $('pMargin').value=60; $('pMktFee').value=20; editId=null; $('editHint').style.display='none'; calc();
 }
 
 /* ---------- TABS ---------- */
